@@ -23,13 +23,16 @@
 #include "utf8.h"
 #include "arabtype.h"
 
-#define ARABIC_LETTER_START		0x621
-#define ARABIC_LETTER_END		0x64A
+#define ARABIC_LETTER_START     0x621
+#define ARABIC_LETTER_END       0x64A
 
-#define ISOLATED	0
-#define ENDING		1
-#define INITIAL		2
-#define MEDIAL		3
+#define TASHKIL_LETTER_START    0x64B
+#define TASHKIL_LETTER_END      0x652
+
+#define ISOLATED    0
+#define ENDING      1
+#define INITIAL     2
+#define MEDIAL      3
 
 #define UNICODE_LAM	0x644
 
@@ -91,6 +94,7 @@ static all_form_t arabic_forms_b[]	= {
 
 
 static inline bool is_arabic_letter(uint32_t cp)		{ return ( cp >= ARABIC_LETTER_START && cp <=  ARABIC_LETTER_END ); }
+static inline bool is_tashkil_letter(uint32_t cp)		{ return ( cp >= TASHKIL_LETTER_START && cp <=  TASHKIL_LETTER_END ); }
 static inline bool is_lam_alef(uint32_t cp, uint32_t next)	{ return cp == UNICODE_LAM &&
 									 is_arabic_letter(next) &&
 									 arabic_forms_b[next - ARABIC_LETTER_START][1][INITIAL] != 0; }
@@ -159,14 +163,24 @@ get_presentation_form_b(size_t in_len, unsigned char* in_str, size_t out_len, ui
 	size_t		s	= 0;
 
 	for( o = 0; o < cp_count; ++o) {
-		uint32_t	cp	= out_cp[o];
-		uint32_t	next	= o < cp_count - 1 ? out_cp[o + 1] : 0;
-		uint32_t	tcp	= get_presentation_form_b_of_char(prev, next, cp);
-		if( tcp != (uint32_t)-1 ) {
-			out_cp[s]	= tcp;
+		uint32_t cp = out_cp[o];
+
+		if (!is_tashkil_letter(cp)) {
+			uint32_t next = o < cp_count - 1 ? out_cp[o + 1] : 0;
+
+			if (is_tashkil_letter(next))
+				next = (o + 1) < cp_count - 1 ? out_cp[o + 2] : 0;
+
+			uint32_t tcp = get_presentation_form_b_of_char(prev, next, cp);
+			if( tcp != (uint32_t)-1 ) {
+				out_cp[s]	= tcp;
+				++s;
+			}
+			prev	= cp;
+		} else {
+			out_cp[s]	= cp;
 			++s;
 		}
-		prev	= cp;
 	}
 
 	return o;
